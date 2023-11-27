@@ -1,38 +1,41 @@
-import time
+#SET IMPORTS HERE
 import pygame
 import numpy as np
 
+#SET VARIABLES HERE
 COLOR_BG = (10, 10, 10)
-COLOR_GRID = (40, 40, 40)
-COLOR_DEAD = (170, 170, 170)
-COLOR_ALIVE = (255, 255, 255)
+COLOR_GRID = (60, 60, 60)
+COLOR_DIE = (150, 150, 150)
+COLOR_LIVE = (255, 255, 255)
 
-CELL_SIZE =10
-CELL_WIDTH = 80
-CELL_HEIGHT = 60
-SCREEN_WIDTH = CELL_SIZE * 80
-SCREEN_HEIGHT = CELL_SIZE * 60
+CELL_SIZE = 10
+CELLS_WIDE = 80
+CELLS_TALL = 60
+SCREEN_WIDTH = CELL_SIZE * CELLS_WIDE
+SCREEN_HEIGHT = CELL_SIZE * CELLS_TALL
 
-def update(screen, cells, size, with_progress=False):
+FPS = 24
+
+def update(screen, cells, size, evolve=False):
     updated_cells = np.zeros((cells.shape[0], cells.shape[1]))
 
     for row, col in np.ndindex(cells.shape):
-        alive = np.sum(cells[row-1:row+2, col-1:col+2]) - cells[row, col]
-        color = COLOR_BG if cells[row, col] == 0 else COLOR_ALIVE
+        neighbors = np.sum(cells[row-1:row+2, col-1:col+2]) - cells[row, col]
+        color = COLOR_BG if cells[row, col] == 0 else COLOR_LIVE
 
         if cells[row, col] == 1:
-            if alive < 2 or alive > 3:
-                if with_progress:
-                    color = COLOR_DEAD
-            elif 2 <= alive <= 3:
+            if 2 <= neighbors <= 3:
                 updated_cells[row, col] = 1
-                if with_progress:
-                    color = COLOR_ALIVE
+                if evolve:
+                    color = COLOR_LIVE
+            else:
+                if evolve:
+                    color = COLOR_DIE
         else:
-            if alive == 3:
+            if neighbors == 3:
                 updated_cells[row, col] = 1
-                if with_progress:
-                    color = COLOR_ALIVE
+                if evolve:
+                    color = COLOR_LIVE
         
         pygame.draw.rect(screen, color, (col * size, row * size, size - 1 , size - 1))
     return updated_cells
@@ -41,7 +44,7 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
-    cells = np.zeros((CELL_HEIGHT, CELL_WIDTH))
+    cells = np.zeros((CELLS_TALL, CELLS_WIDE))
     screen.fill(COLOR_GRID)
     update(screen, cells, CELL_SIZE)
 
@@ -50,12 +53,15 @@ def main():
 
     running = False
 
+    clock = pygame.time.Clock()
+    dt = 0
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
-            elif event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     running = not running
                     update(screen, cells, CELL_SIZE)
@@ -66,11 +72,11 @@ def main():
                 update(screen, cells, CELL_SIZE)
                 pygame.display.update()
 
-        screen.fill(COLOR_GRID)
-
         if running:
-            cells = update(screen, cells, CELL_SIZE, with_progress=True)
+            cells = update(screen, cells, CELL_SIZE, evolve=True)
             pygame.display.update()
+
+        dt = clock.tick(FPS)
 
 if __name__ == '__main__':
     main()
